@@ -1,7 +1,16 @@
 package org.conversion.encodingconversion;
 
+import info.monitorenter.cpdetector.io.ASCIIDetector;
+import info.monitorenter.cpdetector.io.ByteOrderMarkDetector;
+import info.monitorenter.cpdetector.io.CodepageDetectorProxy;
+import info.monitorenter.cpdetector.io.JChardetFacade;
+import info.monitorenter.cpdetector.io.ParsingDetector;
+import info.monitorenter.cpdetector.io.UnicodeDetector;
+
+import java.io.BufferedInputStream;
 import java.io.File;
 import java.io.FileInputStream;
+import java.io.IOException;
 import java.io.InputStream;
 import java.io.Reader;
 
@@ -17,6 +26,8 @@ public class EncodingConverter implements IEncodingConverter {
 	private String sourceEncoding;
 
 	private String targetEncoding;
+	
+	private String fileSuffix;
 
 	private File sourceFile;
 
@@ -25,32 +36,34 @@ public class EncodingConverter implements IEncodingConverter {
 	public void encode() throws Exception {
 
 		InputStream in = new FileInputStream(sourceFile);
-
+		String sourceEncoding =  getFileEncode(in);
 		Reader fileReader = null;
-		// if (Utils.emptyOrNull(sourceEncoding))
-		// {
-		// fileReader = new InputStreamReader(in);
-		// }
-		// else
-		// {
-		// fileReader = new InputStreamReader(in, sourceEncoding);
-		// }
-		// StringBuffer sbContent = new StringBuffer();
-		// int c = 0;
-		// while ((c = fileReader.read()) != -1)
-		// {
-		// sbContent.append((char)c);
-		// }
-		// fileReader.close();
-		byte[] byContent = FileUtils.readFileToByteArray(sourceFile);
-		String fileContent = new String(byContent, targetEncoding);
-
+		
+		String fileContent = FileUtils.readFileToString(sourceFile,sourceEncoding);
 		FileUtils.writeStringToFile(targetFile, fileContent, targetEncoding);
-		// OutputStream out = new FileOutputStream(targetFile);
-		// Writer fileWriter = new OutputStreamWriter(out, targetEncoding);
-		// fileWriter.write(sbContent.toString());
-		// fileWriter.close();
+		
 
+	}
+
+	/**
+	 * 获取文件编码
+	 * @param in
+	 * @return
+	 * @throws IOException
+	 */
+	public String getFileEncode(InputStream in) throws IOException {
+		InputStream is = new BufferedInputStream(in);
+
+		CodepageDetectorProxy detector = CodepageDetectorProxy.getInstance();
+		detector.add(new ParsingDetector(false));
+		detector.add(new ByteOrderMarkDetector());
+		detector.add(JChardetFacade.getInstance()); // Another singleton.
+		// ASCIIDetector用于ASCII编码测定
+		detector.add(ASCIIDetector.getInstance());
+		// UnicodeDetector用于Unicode家族编码的测定
+		detector.add(UnicodeDetector.getInstance());
+		java.nio.charset.Charset charset = detector.detectCodepage(is, Integer.MAX_VALUE);
+		return charset.displayName();
 	}
 
 	public void setSource(File sourceFile) {
@@ -67,6 +80,38 @@ public class EncodingConverter implements IEncodingConverter {
 
 	public void setTargetEncoding(String targetEncoding) {
 		this.targetEncoding = targetEncoding;
+	}
+
+	public synchronized String getFileSuffix() {
+		return fileSuffix;
+	}
+
+	public synchronized void setFileSuffix(String fileSuffix) {
+		this.fileSuffix = fileSuffix;
+	}
+
+	public synchronized File getSourceFile() {
+		return sourceFile;
+	}
+
+	public synchronized void setSourceFile(File sourceFile) {
+		this.sourceFile = sourceFile;
+	}
+
+	public synchronized File getTargetFile() {
+		return targetFile;
+	}
+
+	public synchronized void setTargetFile(File targetFile) {
+		this.targetFile = targetFile;
+	}
+
+	public synchronized String getSourceEncoding() {
+		return sourceEncoding;
+	}
+
+	public synchronized String getTargetEncoding() {
+		return targetEncoding;
 	}
 
 }

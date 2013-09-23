@@ -5,6 +5,10 @@ import java.awt.Container;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.io.File;
+import java.util.Collections;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
 
 import javax.swing.ComboBoxModel;
 import javax.swing.DefaultComboBoxModel;
@@ -17,8 +21,8 @@ import javax.swing.JTextField;
 import javax.swing.SwingUtilities;
 import javax.swing.WindowConstants;
 
+import org.apache.commons.io.FilenameUtils;
 import org.conversion.encodingconversion.EncodingConverter;
-import org.conversion.encodingconversion.IEncodingConverter;
 import org.conversion.utils.Utils;
 
 
@@ -71,13 +75,13 @@ public class MainForm extends javax.swing.JFrame {
 	private void initGUI() {
 		try {
 			setDefaultCloseOperation(WindowConstants.DISPOSE_ON_CLOSE);
-			setTitle("文件编码转换器");
+			setTitle("Encode Convertor");
 			getContentPane().setLayout(null);
 			{
 				btnSource = new JButton();
 				btnSource.setName("btnSource");
 				getContentPane().add(btnSource, null);
-				btnSource.setText("\u6e90\u76ee\u5f55");
+				btnSource.setText("source Dic");
 				btnSource.setBounds(373, 38, 86, 29);
 				btnSource.addActionListener(alChooseFile);
 
@@ -98,21 +102,21 @@ public class MainForm extends javax.swing.JFrame {
 				btnTarget = new JButton();
 				btnTarget.setName("btnTarget");
 				getContentPane().add(btnTarget);
-				btnTarget.setText("\u76ee\u6807\u76ee\u5f55");
+				btnTarget.setText("target Dic");
 				btnTarget.setBounds(374, 95, 86, 29);
 				btnTarget.addActionListener(alChooseFile);
 			}
 			{
 				btnConvert = new JButton();
 				getContentPane().add(btnConvert);
-				btnConvert.setText("\u5f00\u59cb\u8f6c\u6362");
+				btnConvert.setText("Convert");
 				btnConvert.setBounds(77, 238, 93, 27);
 				btnConvert.addActionListener(alConvert);
 			}
 			{
 				btnExit = new JButton();
 				getContentPane().add(btnExit);
-				btnExit.setText("\u9000  \u51fa");
+				btnExit.setText("Exit");
 				btnExit.setBounds(241, 238, 93, 27);
 				btnExit.setLocale(new java.util.Locale("sq"));
 				btnExit.addActionListener(alExit);
@@ -130,14 +134,14 @@ public class MainForm extends javax.swing.JFrame {
 				final JLabel lblTargetEncoding = new JLabel();
 				getContentPane().add(lblTargetEncoding);
 				lblTargetEncoding
-						.setText("\u8f6c\u6362\u4e3a\u5b57\u7b26\u7f16\u7801\uff1a");
+						.setText("target encoding:");
 				lblTargetEncoding.setBounds(24, 150, 114, 15);
 			}
 			{
 				final JLabel lblFilter = new JLabel();
 				getContentPane().add(lblFilter);
 				lblFilter
-						.setText("\u6587\u4ef6\u8fc7\u6ee4\u540e\u7f00\u8bbe\u7f6e\uff1a");
+						.setText("extensions(comma):");
 				lblFilter.setBounds(24, 189, 124, 15);
 			}
 			{
@@ -145,8 +149,6 @@ public class MainForm extends javax.swing.JFrame {
 				getContentPane().add(tfFilter);
 				tfFilter.setName("tfTarget");
 				tfFilter.setBounds(166, 186, 274, 22);
-				final String filterText = "默认不过滤文件后缀,每一个后缀用分号隔开";
-				tfFilter.setToolTipText(filterText);
 
 			}
 			pack();
@@ -194,59 +196,57 @@ public class MainForm extends javax.swing.JFrame {
 				try {
 					convert(sourceFolder, targetFolder, tfFilter.getText());
 
-					showMessageDialog("转换完成!");
+					showMessageDialog("The conversion is complete!");
 				} catch (Exception e1) {
 					e1.printStackTrace();
 					showMessageDialog(e1.getMessage());
 				}
 			}
-
 		}
-
 	};
 
-	private void convert(File source, File targetFolder, String filter)
+	/**
+	 * 调用转换方法
+	 * @param source
+	 * @param targetFolder
+	 * @param filterSuffix
+	 * @throws Exception
+	 */
+	private void convert(File source, File targetFolder, String filterSuffix)
 			throws Exception {
 		if (source.isDirectory()) {
 			for (File subFile : source.listFiles()) {
-				convert(subFile, targetFolder, filter);
+				convert(subFile, targetFolder, filterSuffix);
 			}
 		} else {
-			if (filter != null && !filter.isEmpty()) {
+			if (filterSuffix != null && !filterSuffix.isEmpty()) {
 				String fileName = source.getName();
-				if (fileName.lastIndexOf('.') == -1) {
+				String extension =  FilenameUtils.getExtension(fileName);
+				filterSuffix = filterSuffix.toLowerCase().trim();
+				if ("".equals(extension)) {
 					return;
 				}
-				String[] suffixList = filter.split(";");
-				String fileSuffix = fileName.substring(fileName
-						.lastIndexOf('.') + 1);
-				boolean find = false;
-				for (String suffix : suffixList) {
-					if (fileSuffix.equalsIgnoreCase(suffix)) {
-						find = true;
-						break;
-					}
-				}
-				if (!find) {
+				
+				if (!filterSuffix.contains(extension)) {
 					return;
 				}
-
 			}
 
-			IEncodingConverter encodingConverter = new EncodingConverter();
-			encodingConverter.setSource(source);
+			EncodingConverter converter = new EncodingConverter();
+			converter.setSource(source);
 			String suffixPath = source.getAbsolutePath().substring(
 					sourceFolder.getAbsolutePath().length());
 			String targetFilePath = targetFolder.getAbsoluteFile() + suffixPath;
 			File targetFile = new File(targetFilePath);
-			File parentFolder = targetFile.getParentFile();
+			/*File parentFolder = targetFile.getParentFile();
 			if (!parentFolder.exists()) {
 				parentFolder.mkdirs();
-			}
-			encodingConverter.setTarget(targetFile);
-			encodingConverter.setTargetEncoding(cboCharsetList
+			}*/
+			converter.setTarget(targetFile);
+			converter.setTargetEncoding(cboCharsetList
 					.getSelectedItem().toString());
-			encodingConverter.encode();
+			converter.setFileSuffix(filterSuffix);
+			converter.encode();
 		}
 	}
 
