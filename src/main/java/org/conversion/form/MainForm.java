@@ -273,26 +273,15 @@ public class MainForm extends javax.swing.JFrame {
 
 	private void getErrMsg(File sourceFolder, File targetFolder,
 			StringBuilder errorMsg) {
-		if (sourceFolder == null || !sourceFolder.exists()) {
-			errorMsg.append("源目录为空或不存在");
-			return;
-		}
-
-		if (sourceFolder.isFile()) {
-			errorMsg.append("源目录路径必须为一个目录");
+		if (sourceFolder == null || !sourceFolder.exists() || sourceFolder.isFile()) {
+			errorMsg.append("Source directory is invalid.");
 			return;
 		}
 
 		if (targetFolder == null) {
-			errorMsg.append("目标目录不能为空");
+			errorMsg.append("Source directory is invalid.");
 			return;
 		}
-
-		if (!targetFolder.exists() && !targetFolder.mkdirs()) {
-			errorMsg.append("目标目录是一个错误的路径");
-			return;
-		}
-
 	}
 
 	public void showMessageDialog(String message) {
