@@ -12,6 +12,8 @@ public  class Utils
 {
     private static Map<String , Charset> charsetMap = Charset.availableCharsets();
     
+    public static final String AUTO_DETECT = "auto detect";
+    
     
     public static Object[] getCharSetList()
     {

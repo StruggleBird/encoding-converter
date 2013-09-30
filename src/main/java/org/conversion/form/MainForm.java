@@ -5,10 +5,9 @@ import java.awt.Container;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.io.File;
-import java.util.Collections;
-import java.util.HashSet;
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
-import java.util.Set;
 
 import javax.swing.ComboBoxModel;
 import javax.swing.DefaultComboBoxModel;
@@ -21,7 +20,6 @@ import javax.swing.JTextField;
 import javax.swing.SwingUtilities;
 import javax.swing.WindowConstants;
 
-import org.apache.commons.io.FilenameUtils;
 import org.conversion.encodingconversion.EncodingConverter;
 import org.conversion.utils.Utils;
 
@@ -110,45 +108,65 @@ public class MainForm extends javax.swing.JFrame {
 				btnConvert = new JButton();
 				getContentPane().add(btnConvert);
 				btnConvert.setText("Convert");
-				btnConvert.setBounds(77, 238, 93, 27);
+				btnConvert.setBounds(77, 252, 93, 27);
 				btnConvert.addActionListener(alConvert);
 			}
 			{
 				btnExit = new JButton();
 				getContentPane().add(btnExit);
 				btnExit.setText("Exit");
-				btnExit.setBounds(241, 238, 93, 27);
+				btnExit.setBounds(241, 252, 93, 27);
 				btnExit.setLocale(new java.util.Locale("sq"));
 				btnExit.addActionListener(alExit);
 			}
 			{
+				Object[] charsetArray = Utils.getCharSetList();
+				List list = Arrays.asList(charsetArray);
+				ArrayList allList = new ArrayList();
+				allList.add(Utils.AUTO_DETECT);
+				allList.addAll(list);
+				ComboBoxModel cboCharsetListModel = new DefaultComboBoxModel(
+						allList.toArray());
+				cboSourceCharsetList = new JComboBox();
+				getContentPane().add(cboSourceCharsetList);
+				cboSourceCharsetList.setModel(cboCharsetListModel);
+				cboSourceCharsetList.setBounds(201, 146, 188, 22);
+				cboSourceCharsetList.setLocale(new java.util.Locale("sq"));
+			}
+			{
 				ComboBoxModel cboCharsetListModel = new DefaultComboBoxModel(
 						Utils.getCharSetList());
-				cboCharsetList = new JComboBox();
-				getContentPane().add(cboCharsetList);
-				cboCharsetList.setModel(cboCharsetListModel);
-				cboCharsetList.setBounds(165, 146, 188, 22);
-				cboCharsetList.setLocale(new java.util.Locale("sq"));
+				cboTargetCharsetList = new JComboBox();
+				getContentPane().add(cboTargetCharsetList);
+				cboTargetCharsetList.setModel(cboCharsetListModel);
+				cboTargetCharsetList.setBounds(201, 176, 188, 22);
+				cboTargetCharsetList.setLocale(new java.util.Locale("sq"));
+			}
+			
+			{
+				final JLabel lbSourceEncoding = new JLabel();
+				getContentPane().add(lbSourceEncoding);
+				lbSourceEncoding
+						.setText("source encoding(optional):");
+				lbSourceEncoding.setBounds(24, 150, 165, 15);
 			}
 			{
 				final JLabel lblTargetEncoding = new JLabel();
 				getContentPane().add(lblTargetEncoding);
-				lblTargetEncoding
-						.setText("target encoding:");
-				lblTargetEncoding.setBounds(24, 150, 114, 15);
+				lblTargetEncoding.setText("target encoding:");
+				lblTargetEncoding.setBounds(24, 177, 153, 15);
 			}
 			{
 				final JLabel lblFilter = new JLabel();
 				getContentPane().add(lblFilter);
-				lblFilter
-						.setText("extensions(comma):");
-				lblFilter.setBounds(24, 189, 124, 15);
+				lblFilter.setText("extensions(semicolon):");
+				lblFilter.setBounds(24, 213, 153, 15);
 			}
 			{
 				tfFilter = new JTextField();
 				getContentPane().add(tfFilter);
 				tfFilter.setName("tfTarget");
-				tfFilter.setBounds(166, 186, 274, 22);
+				tfFilter.setBounds(202, 210, 187, 22);
 
 			}
 			pack();
@@ -185,7 +203,8 @@ public class MainForm extends javax.swing.JFrame {
 			System.exit(0);
 		}
 	};
-	private JComboBox cboCharsetList;
+	private JComboBox cboSourceCharsetList;
+	private JComboBox cboTargetCharsetList;
 
 	ActionListener alConvert = new ActionListener() {
 		
@@ -194,7 +213,9 @@ public class MainForm extends javax.swing.JFrame {
 			targetFolder = new File(tfTarget.getText());
 			if (validatePass()) {
 				try {
-					convert(sourceFolder, targetFolder, tfFilter.getText());
+					EncodingConverter.convert(sourceFolder, targetFolder, cboSourceCharsetList.getSelectedItem()
+							.toString(), cboTargetCharsetList.getSelectedItem()
+							.toString(), tfFilter.getText());
 
 					showMessageDialog("The conversion is complete!");
 				} catch (Exception e1) {
@@ -205,50 +226,6 @@ public class MainForm extends javax.swing.JFrame {
 		}
 	};
 
-	/**
-	 * 调用转换方法
-	 * @param source
-	 * @param targetFolder
-	 * @param filterSuffix
-	 * @throws Exception
-	 */
-	private void convert(File source, File targetFolder, String filterSuffix)
-			throws Exception {
-		if (source.isDirectory()) {
-			for (File subFile : source.listFiles()) {
-				convert(subFile, targetFolder, filterSuffix);
-			}
-		} else {
-			if (filterSuffix != null && !filterSuffix.isEmpty()) {
-				String fileName = source.getName();
-				String extension =  FilenameUtils.getExtension(fileName);
-				filterSuffix = filterSuffix.toLowerCase().trim();
-				if ("".equals(extension)) {
-					return;
-				}
-				
-				if (!filterSuffix.contains(extension)) {
-					return;
-				}
-			}
-
-			EncodingConverter converter = new EncodingConverter();
-			converter.setSource(source);
-			String suffixPath = source.getAbsolutePath().substring(
-					sourceFolder.getAbsolutePath().length());
-			String targetFilePath = targetFolder.getAbsoluteFile() + suffixPath;
-			File targetFile = new File(targetFilePath);
-			/*File parentFolder = targetFile.getParentFile();
-			if (!parentFolder.exists()) {
-				parentFolder.mkdirs();
-			}*/
-			converter.setTarget(targetFile);
-			converter.setTargetEncoding(cboCharsetList
-					.getSelectedItem().toString());
-			converter.setFileSuffix(filterSuffix);
-			converter.encode();
-		}
-	}
 
 	private Component findComponent(Container container, String name) {
 		for (Component component : container.getComponents()) {

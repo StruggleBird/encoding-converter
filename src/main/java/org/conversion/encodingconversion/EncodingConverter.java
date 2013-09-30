@@ -12,9 +12,10 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
-import java.io.Reader;
+import java.util.List;
 
 import org.apache.commons.io.FileUtils;
+import org.conversion.utils.Utils;
 
 /**
  * @version 1.0 2010-9-28
@@ -26,23 +27,78 @@ public class EncodingConverter implements IEncodingConverter {
 	private String sourceEncoding;
 
 	private String targetEncoding;
-	
+
 	private String fileSuffix;
 
 	private File sourceFile;
 
 	private File targetFile;
 
+	/**
+	 * 调用转换方法
+	 * @param sourceRoot
+	 * @param targetRoot
+	 * @param filterSuffix
+	 * @throws Exception
+	 */
+	public static void convert(File sourceRoot, File targetRoot,String sourceEncoding,String targetEncoding, String filterSuffix) throws Exception {
+		System.out.println("specific sourceEncoding:"+sourceEncoding);
+		if (sourceRoot.isDirectory()) {
+			String [] extensions = (filterSuffix==null || filterSuffix.equals(""))?null:filterSuffix.split(";");
+			List<File> fileList = (List<File>) FileUtils.listFiles(sourceRoot, extensions, true);
+			for (File sourceFile : fileList) {
+				EncodingConverter converter = new EncodingConverter();
+				converter.setSource(sourceFile);
+				String suffixPath = sourceFile.getAbsolutePath().substring(sourceRoot.getAbsolutePath().length());
+				String targetFilePath = targetRoot.getAbsoluteFile() + suffixPath;
+				File targetFile = new File(targetFilePath);
+				converter.setTarget(targetFile);
+				converter.setSourceEncoding(sourceEncoding);
+				converter.setTargetEncoding(targetEncoding);
+				converter.setFileSuffix(filterSuffix);
+				converter.encode();
+			}
+		}else {
+			EncodingConverter converter = new EncodingConverter();
+			converter.setSource(sourceRoot);
+			String suffixPath = sourceRoot.getAbsolutePath().substring(sourceRoot.getAbsolutePath().length());
+			String targetFilePath = targetRoot.getAbsoluteFile() + suffixPath;
+			File targetFile = new File(targetFilePath);
+			converter.setTarget(targetFile);
+			converter.setSourceEncoding(sourceEncoding);
+			converter.setTargetEncoding(targetEncoding);
+			converter.setFileSuffix(filterSuffix);
+			converter.encode();
+		}
+	}
+
+	/**
+	 * 编码单个文件，并保存
+	 */
 	public void encode() throws Exception {
 
 		InputStream in = new FileInputStream(sourceFile);
-		String sourceEncoding =  getFileEncode(in);
-		Reader fileReader = null;
+		String detectEncoding  = getFileEncode(in);
+		System.out.println("[" + sourceFile.getName() + "] is processing"
+				+ " ;  detect encoding:" + detectEncoding);
+		if (detectEncoding.equals(targetEncoding.toUpperCase())) {
+			if (!sourceFile.getAbsoluteFile().equals(targetFile.getAbsoluteFile())) {
+				FileUtils.copyFile(sourceFile, targetFile);
+			}
+			
+			System.out.println("source encoding is " + sourceEncoding +", don't need to encode.");
+			return;
+		}
 		
-		String fileContent = FileUtils.readFileToString(sourceFile,sourceEncoding);
-		FileUtils.writeStringToFile(targetFile, fileContent, targetEncoding);
+		//自动检测源文件编码
+		if (sourceEncoding == null || sourceEncoding.equals("")
+				|| Utils.AUTO_DETECT.equals(sourceEncoding)) {
+			sourceEncoding = detectEncoding;
+		}
 		
 
+		String fileContent = FileUtils.readFileToString(sourceFile, sourceEncoding);
+		FileUtils.writeStringToFile(targetFile, fileContent, targetEncoding);
 	}
 
 	/**
